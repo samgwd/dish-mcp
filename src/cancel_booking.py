@@ -1,11 +1,10 @@
-# Function to cancel a room booking
+"""Function to cancel a room booking."""
+
+from typing import Any
+
 import requests
 
-ROOM_ID_TO_NAME = {
-    "6422bced61d5854ab3fedd62": "Boyle",
-    "6422bcd50340a914e68e661b": "Pankhurst",
-    "6422bcff9814c9c32ed62d77": "Turing",
-}
+from .utils.constants import ROOM_ID_TO_NAME, get_cancel_booking_endpoint
 
 
 def cancel_booking(
@@ -13,8 +12,7 @@ def cancel_booking(
     cookie: str,
     skip_cancellation_policy: bool = False,
 ) -> requests.Response:
-    """
-    Cancel a room booking using the Dish Manchester API.
+    """Cancel a room booking using the Dish Manchester API.
 
     Args:
         booking_id: The ID of the booking to cancel (e.g., "692192791c60f69c20311db3")
@@ -24,7 +22,7 @@ def cancel_booking(
     Returns:
         requests.Response: The HTTP response object
     """
-    url = f"https://dish-manchester.officernd.com/community/i/organizations/dish-manchester/user/bookings/{booking_id}/cancel"
+    url = get_cancel_booking_endpoint(booking_id)
 
     params = {
         "skipCancellationPolicy": str(skip_cancellation_policy).lower(),
@@ -32,14 +30,13 @@ def cancel_booking(
 
     headers = {"Content-Type": "application/json", "Cookie": cookie}
 
-    response = requests.post(url, params=params, headers=headers)
+    response = requests.post(url, params=params, headers=headers, timeout=30)
 
     return response
 
 
-def format_cancellation_response(response_data):
-    """
-    Format the cancellation response to include a succinct, human readable summary.
+def _normalise_booking(response_data: dict[str, Any]) -> dict[str, Any]:
+    """Return a dict booking payload or the appropriate fallback.
 
     Args:
         response_data: The JSON response from the cancellation API (dict).
@@ -53,36 +50,65 @@ def format_cancellation_response(response_data):
     if not isinstance(response_data, dict):
         return {"title": "Cancellation succeeded but response format was unexpected."}
 
-    booking = response_data
+    return response_data.copy()
 
+
+def _clean_time(iso_str: str) -> str:
+    """Clean a time string from an ISO format.
+
+    Args:
+        iso_str: The ISO time string to clean.
+
+    Returns:
+        str: The cleaned time string.
+    """
+    if not iso_str:
+        return "?"
+    # Keep only the date and time, discard subseconds/timezone as we already
+    # expose the timezone elsewhere in the payload.
+    return iso_str.replace("T", " ").split(".")[0]
+
+
+def _build_title(booking: dict[str, Any]) -> str:
+    """Build a title for a cancellation.
+
+    Args:
+        booking: The booking object.
+
+    Returns:
+        str: The title for the cancellation.
+    """
     start_time = booking.get("start", {}).get("dateTime")
     end_time = booking.get("end", {}).get("dateTime")
-    resource_id = booking.get("resourceId")
-    reference = booking.get("reference")
-    canceled = booking.get("canceled", False)
-
+    resource_id = booking.get("resourceId") or ""
     room_name = ROOM_ID_TO_NAME.get(resource_id, "Unknown room")
+    cancelled = booking.get("cancelled", False)
+    reference = booking.get("reference")
 
-    def clean_time(iso_str):
-        if not iso_str:
-            return "?"
-        # Keep only the date and time, discard subseconds/timezone as we already
-        # expose the timezone elsewhere in the payload.
-        return iso_str.replace("T", " ").split(".")[0]
-
-    start_str = clean_time(start_time)
-    end_str = clean_time(end_time)
-
-    if canceled:
-        title = f"Cancelled booking for {room_name} from {start_str} to {end_str}"
-    else:
-        title = (
-            f"Attempted to cancel booking for {room_name} from {start_str} to {end_str}"
-        )
+    action = "Cancelled" if cancelled else "Attempted to cancel"
+    start_str = _clean_time(start_time)
+    end_str = _clean_time(end_time)
+    title = f"{action} booking for {room_name} from {start_str} to {end_str}"
 
     if reference:
         title = f"{title} (ref {reference})"
 
-    booking["title"] = title
+    return title
 
+
+def format_cancellation_response(response_data: dict[str, Any]) -> dict[str, Any]:
+    """Format the cancellation response to include a succinct, human readable summary.
+
+    Args:
+        response_data: The JSON response from the cancellation API (dict).
+
+    Returns:
+        dict: The booking object with an added 'title' field.
+    """
+    booking = _normalise_booking(response_data)
+
+    if "title" in booking:
+        return booking
+
+    booking["title"] = _build_title(booking)
     return booking

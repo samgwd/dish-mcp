@@ -9,10 +9,12 @@ dependencies = [
     "pip>=25.3",
     "python-dotenv>=1.0.0",
     "requests>=2.32.5",
+    "types-requests>=2.32.0",
 ]
 
 # mypy configuration
 [tool.mypy]
+python_executable = ".venv/bin/python"
 show_error_codes = true
 exclude = ["docs", "tests", "LICENSE"]
 strict = true
@@ -81,7 +83,7 @@ max-complexity = 5
 
 # typos configuration
 [tool.typos.files]
-extend-exclude = [".gitignore", "LICENSE", ".*"]
+extend-exclude = [".gitignore", "LICENSE", ".*", "*.ipynb"]
 
 [tool.typos.default.extend-words]
 center = "center"

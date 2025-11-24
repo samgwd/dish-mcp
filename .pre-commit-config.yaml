@@ -5,32 +5,23 @@ repos:
     rev: v4.5.0
     hooks:
       - id: check-toml
-        files: ^multi_label/
       - id: check-yaml
-        files: ^multi_label/
         args: ["--unsafe"] # only check syntax for yaml files
       - id: check-json
-        files: ^multi_label/
       - id: mixed-line-ending
-        files: ^multi_label/.*\.(py|txt|yaml|json|md|toml|lock|cfg|html|sh|js|yml)$
+        files: "\\.(py|txt|yaml|json|md|toml|lock|cfg|html|sh|js|yml)$"
       - id: trailing-whitespace
-        files: ^multi_label/.*\.(py|txt|yaml|json|md|toml|lock|cfg|html|sh|js|yml)$
+        files: "\\.(py|txt|yaml|json|md|toml|lock|cfg|html|sh|js|yml)$"
       - id: end-of-file-fixer
-        files: ^multi_label/
       - id: check-added-large-files
-        files: ^multi_label/
         args: ["--maxkb=1000"]
       - id: check-case-conflict
-        files: ^multi_label/
       - id: requirements-txt-fixer
-        files: ^multi_label/.*requirements.*\.txt$
 
   - repo: https://github.com/psf/black
     rev: 23.10.1
     hooks:
       - id: black
-        files: ^multi_label/.*\.py$
-        exclude: ^multi_label/(stm32ai_main\.py|src/(utils|deployment|quantization)/)
         args: [--config=pyproject.toml]
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
@@ -38,31 +29,26 @@ repos:
     rev: "v0.1.2"
     hooks:
       - id: ruff
-        files: ^multi_label/.*\.py$
-        exclude: ^multi_label/(stm32ai_main\.py|src/(utils|deployment|quantization)/)
         args: [--fix, --exit-non-zero-on-fix, "--config=pyproject.toml"] # enable autofix
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.6.1
     hooks:
       - id: mypy
-        files: ^multi_label/.*\.py$
-        exclude: ^multi_label/(stm32ai_main\.py|src/(utils|deployment|quantization)/)
         args: ["--config-file=pyproject.toml"]
+        exclude: ^tests/
 
   - repo: https://github.com/crate-ci/typos
     rev: typos-dict-v0.11.2
     hooks:
       - id: typos
-        files: ^multi_label/
-        exclude: ^multi_label/(stm32ai_main\.py|src/(utils|deployment|quantization)/|data_preparation\.ipynb)
         args: [--config=pyproject.toml]
+        pass_filenames: false
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.8
     hooks:
       - id: bandit
-        files: ^multi_label/.*\.py$
         args: ["--config=pyproject.toml"]
         additional_dependencies: ["bandit[toml]"]
 

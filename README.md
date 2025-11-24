@@ -41,8 +41,8 @@ The server requires a `DISH_COOKIE` environment variable to authenticate with th
 6. **Click on the Dish website domain** (e.g., `app.dish.co` or similar)
 7. **Find the `connect.sid` cookie** in the list
 8. **Copy the cookie value** — it should look like:
-   ```
-   s%3A6O3-ca7RRYse-Uw2YfxHSHODvvg1IbBn.rjqQh9E2x0isLpJq9%2Bmf3gxAAMr9OgQj%2BrgSnXRcz3c
+   ```text
+   s%3A6O3-ca7RRPse-Uw2YfxHSHODvvg1IbBn.rjqQh9E2x0isLpJq9%2Bmf3gxAAMr9OgQj%2BrgSnXRcz3c
    ```
 9. **Use the full cookie string** in the format `connect.sid=<value>` for the `DISH_COOKIE` environment variable
 
