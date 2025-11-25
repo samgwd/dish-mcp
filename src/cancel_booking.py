@@ -3,8 +3,7 @@
 from typing import Any
 
 import requests
-
-from .utils.constants import ROOM_ID_TO_NAME, get_cancel_booking_endpoint
+from utils.constants import ROOM_ID_TO_NAME, get_cancel_booking_endpoint
 
 
 def cancel_booking(

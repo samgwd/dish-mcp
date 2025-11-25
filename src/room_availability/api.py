@@ -5,9 +5,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 import requests
-
-from ..utils.constants import BOOKINGS_OCCURRENCES_ENDPOINT
-from ..utils.type_defs import DatetimeRange
+from utils.constants import BOOKINGS_OCCURRENCES_ENDPOINT
+from utils.type_defs import DatetimeRange
 
 
 def _serialise_resource_ids(resource_ids: str | Iterable[str]) -> str:

@@ -16,6 +16,8 @@ dependencies = [
 [tool.mypy]
 python_executable = ".venv/bin/python"
 show_error_codes = true
+mypy_path = "src"
+explicit_package_bases = true
 exclude = ["docs", "tests", "LICENSE"]
 strict = true
 namespace_packages = true

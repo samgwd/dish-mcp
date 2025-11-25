@@ -3,18 +3,17 @@
 import os
 from typing import Any
 
-from fastmcp import Context, FastMCP
-
-from .book_room import book_room as book_room_api
-from .book_room import format_booking_response
-from .cancel_booking import (
+from book_room import book_room as book_room_api
+from book_room import format_booking_response
+from cancel_booking import (
     cancel_booking as cancel_booking_api,
 )
-from .cancel_booking import (
+from cancel_booking import (
     format_cancellation_response,
 )
-from .get_room_availability import extract_room_availability, get_room_availability
-from .utils.type_defs import DatetimeRange, UserInfo
+from fastmcp import Context, FastMCP
+from get_room_availability import extract_room_availability, get_room_availability
+from utils.type_defs import DatetimeRange, UserInfo
 
 DEFAULT_RESOURCE_IDS = [
     "6422bced61d5854ab3fedd62",  # Boyle

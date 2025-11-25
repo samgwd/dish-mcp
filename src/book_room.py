@@ -3,9 +3,8 @@
 from typing import Any
 
 import requests
-
-from .utils.constants import BOOKINGS_ENDPOINT, ROOM_ID_TO_NAME, ROOM_NAME_TO_ID
-from .utils.type_defs import DatetimeRange, UserInfo
+from utils.constants import BOOKINGS_ENDPOINT, ROOM_ID_TO_NAME, ROOM_NAME_TO_ID
+from utils.type_defs import DatetimeRange, UserInfo
 
 
 def book_room(

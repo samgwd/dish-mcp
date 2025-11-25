@@ -6,8 +6,8 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any
 
-from ..utils.constants import ROOM_ID_TO_NAME
-from ..utils.type_defs import DatetimeRange
+from utils.constants import ROOM_ID_TO_NAME
+from utils.type_defs import DatetimeRange
 
 NO_BOOKINGS_NOTE = "No bookings found - room completely available"
 

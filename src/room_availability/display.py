@@ -6,9 +6,8 @@ from datetime import datetime
 from typing import Any
 
 import requests
-
-from ..utils.type_defs import DatetimeRange
-from .extraction import extract_room_availability
+from room_availability.extraction import extract_room_availability
+from utils.type_defs import DatetimeRange
 
 
 def _print_summary_header() -> None:
