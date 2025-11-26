@@ -1,6 +1,9 @@
-# Dish MCP Server
+# DiSH MCP Server
 
-This is a Model Context Protocol (MCP) server for the Dish MCP, allowing you to check room availability.
+This is a Model Context Protocol (MCP) server for the DiSH room booking website. This MCP had the following features:
+- Check room availability
+- Book a room
+- Cancel a booking
 
 ## Prerequisites
 
@@ -31,7 +34,7 @@ To use this MCP server with Cursor or Claude Desktop, you need to configure them
 
 The server requires a `DISH_COOKIE` environment variable to authenticate with the Dish MCP. To get this cookie:
 
-1. **Open your browser** and navigate to the Dish website
+1. **Open your browser** and navigate to the DiSH website
 2. **Log in** to your account
 3. **Open Developer Tools**:
    - **Chrome/Edge**: Press `F12` or `Cmd+Option+I` (Mac) / `Ctrl+Shift+I` (Windows/Linux)
