@@ -7,10 +7,23 @@ requires-python = ">=3.12"
 dependencies = [
     "fastmcp>=2.13.1",
     "pip>=25.3",
+    "playwright>=1.56.0",
     "python-dotenv>=1.0.0",
     "requests>=2.32.5",
     "types-requests>=2.32.0",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "responses>=0.25.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-v --tb=short"
 
 # mypy configuration
 [tool.mypy]
@@ -74,6 +87,13 @@ ignore = [
     "UP007", # See https://github.com/bokeh/bokeh/pull/13144
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "PLR2004",  # Magic value comparisons are fine in tests
+    "PLR0913",  # Too many arguments is fine in tests (fixtures)
+    "D",        # Docstrings not required in tests
+]
+
 [tool.ruff.lint.pydocstyle]
 # Use Google-style docstrings.
 convention = "google"
@@ -83,12 +103,17 @@ convention = "google"
 max-complexity = 5
 
 
+# bandit configuration
+[tool.bandit]
+exclude_dirs = ["tests"]
+
 # typos configuration
 [tool.typos.files]
 extend-exclude = [".gitignore", "LICENSE", ".*", "*.ipynb"]
 
 [tool.typos.default.extend-words]
 center = "center"
+ve = "ve"
 
 [tool.typos.default]
 locale = "en-gb"
