@@ -1,101 +1,89 @@
 # DiSH MCP Server
 
-This is a Model Context Protocol (MCP) server for the DiSH room booking website. This MCP had the following features:
-- Check room availability
-- Book a room
-- Cancel a booking
+A Model Context Protocol (MCP) server for the DiSH room booking site. It exposes tools to check availability, book rooms, and cancel bookings so assistants like Cursor or Claude can manage your reservations.
 
-## Prerequisites
+## What it can do
+- Search room availability across your DiSH locations
+- Create bookings on your behalf
+- Cancel or reschedule existing bookings
+- Pair with calendar tools (e.g., [Google Calendar MCP](https://github.com/nspady/google-calendar-mcp)) to coordinate bookings with your calendar availability.
 
+Example prompts:
+- "Book meeting rooms for all my standups this week."
+- "Reschedule my 1-1 with John to tomorrow afternoon when we’re both free and a room is open."
+- "Book a meeting room for all my customer demos for the next 2 months."
+
+## Requirements
 - Python 3.10+
-- `uv` (recommended for dependency management)
+- [`uv`](https://github.com/astral-sh/uv) for dependency management
 
-## Installation
+## Setup
+```bash
+uv sync
+```
 
-1. Clone the repository.
-2. Install dependencies:
-   ```bash
-   uv sync
-   ```
+## Configuration
+The server needs three environment variables:
+- `DISH_COOKIE` — your DiSH `connect.sid` session cookie
+- `TEAM_ID` — your DiSH team ID
+- `MEMBER_ID` — your DiSH member ID
 
-## Usage
+### Getting your `connect.sid` cookie
+1. Log in to DiSH in your browser.
+2. Open Developer Tools (F12 / Cmd+Option+I).
+3. In Application/Storage > Cookies, select the DiSH domain.
+4. Copy the `connect.sid` value (looks like `s%3A...`).
+5. In your `.env` file, set `DISH_COOKIE` to `connect.sid=<value>`.
 
-You can run the MCP server using `fastmcp`:
+### Getting your team and member IDs
+1. Log in to DiSH in your browser.
+2. Open Developer Tools (F12 / Cmd+Option+I).
+3. In Network tab, find the request labelled `booking-policy`
+4. In the request payload, look for the `team_id` and `member_id` values.
+5. Copy the `team_id` and `member_id` values (looks like `653ftv2a3l25h39b9k40e1029` and `9732dtgt60312dghe6`).
+6. In your `.env` file, set `TEAM_ID` to `team_id=<value>` and `MEMBER_ID` to `member_id=<value>`.
 
+**Keep this secret.** Do not commit cookies, team IDs or member IDs, or .env files to source control; regenerate the cookie if it stops working or was ever exposed.
+
+## Run the MCP server
 ```bash
 uv run fastmcp run src/mcp_server.py
 ```
 
-## MCP Server Configuration
+## Configure your client
 
-To use this MCP server with Cursor or Claude Desktop, you need to configure them with the correct command and environment variables.
-
-### Environment Variables
-
-The server requires a `DISH_COOKIE` environment variable to authenticate with the Dish MCP. To get this cookie:
-
-1. **Open your browser** and navigate to the DiSH website
-2. **Log in** to your account
-3. **Open Developer Tools**:
-   - **Chrome/Edge**: Press `F12` or `Cmd+Option+I` (Mac) / `Ctrl+Shift+I` (Windows/Linux)
-   - **Firefox**: Press `F12` or `Cmd+Option+I` (Mac) / `Ctrl+Shift+I` (Windows/Linux)
-4. **Go to the Application tab** (Chrome/Edge) or **Storage tab** (Firefox)
-5. **In the left sidebar**, expand **Cookies**
-6. **Click on the Dish website domain** (e.g., `app.dish.co` or similar)
-7. **Find the `connect.sid` cookie** in the list
-8. **Copy the cookie value** — it should look like:
-   ```text
-   s%3A6O3-ca7RRPse-Uw2YfxHSHODvvg1IbBn.rjqQh9E2x0isLpJq9%2Bmf3gxAAMr9OgQj%2BrgSnXRcz3c
-   ```
-9. **Use the full cookie string** in the format `connect.sid=<value>` for the `DISH_COOKIE` environment variable
-
-> [!NOTE]
-> The cookie expires periodically, so you may need to refresh it if authentication stops working.
-
-### Cursor Configuration
-
-Add the following to your Cursor MCP settings:
-
+### Cursor
 ```json
 "Dish MCP": {
-  "command": "/Users/samgreenwood/code/personal_development/room-booking-bot/dish-mcp/.venv/bin/fastmcp",
-  "args": [
-    "run",
-    "/Users/samgreenwood/code/personal_development/room-booking-bot/dish-mcp/src/mcp_server.py"
-  ],
-  "cwd": "/Users/samgreenwood/code/personal_development/room-booking-bot/dish-mcp",
+  "command": "<PATH_TO_VENV>/bin/fastmcp",
+  "args": ["run", "<PATH_TO_REPO>/src/mcp_server.py"],
+  "cwd": "<PATH_TO_REPO>",
   "env": {
-    "DISH_COOKIE": "<YOUR_DISH_COOKIE>",
-    "TEAM_ID":"<YOUR_TEAM_ID>",
-    "MEMBER_ID":"<YOUR_MEMBER_ID>"
+    "DISH_COOKIE": "<connect.sid=...>",
+    "TEAM_ID": "<YOUR_TEAM_ID>",
+    "MEMBER_ID": "<YOUR_MEMBER_ID>"
   },
   "transport": "stdio"
 }
 ```
 
-### Claude Desktop Configuration
-
-Add the following to your `claude_desktop_config.json` (usually located at `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
-
+### Claude Desktop
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
     "Dish MCP": {
-      "command": "/Users/samgreenwood/code/personal_development/room-booking-bot/dish-mcp/.venv/bin/fastmcp",
-      "args": [
-        "run",
-        "/Users/samgreenwood/code/personal_development/room-booking-bot/dish-mcp/src/mcp_server.py"
-      ],
-      "cwd": "/Users/samgreenwood/code/personal_development/room-booking-bot/dish-mcp",
+      "command": "<PATH_TO_VENV>/bin/fastmcp",
+      "args": ["run", "<PATH_TO_REPO>/src/mcp_server.py"],
+      "cwd": "<PATH_TO_REPO>",
       "env": {
-        "DISH_COOKIE": "<YOUR_DISH_COOKIE>",
-        "TEAM_ID":"<YOUR_TEAM_ID>",
-        "MEMBER_ID":"<YOUR_MEMBER_ID>"
+        "DISH_COOKIE": "<connect.sid=...>",
+        "TEAM_ID": "<YOUR_TEAM_ID>",
+        "MEMBER_ID": "<YOUR_MEMBER_ID>"
       }
     }
   }
 }
 ```
 
-> [!NOTE]
-> The paths in the configuration above are absolute paths specific to this environment. If you move the project, you will need to update these paths.
+> The cookie expires periodically; grab a fresh value if authentication fails.
