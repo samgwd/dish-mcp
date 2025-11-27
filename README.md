@@ -28,22 +28,43 @@ The server needs three environment variables:
 - `TEAM_ID` — your DiSH team ID
 - `MEMBER_ID` — your DiSH member ID
 
-### Getting your `connect.sid` cookie
+### Automatic credential retrieval (recommended)
+
+The easiest way to get your credentials is to use the included script:
+
+```bash
+# Install Playwright browser (first time only)
+uv run playwright install chromium
+
+# Run the credential retrieval script
+uv run src/get_credentials.py
+```
+
+This will:
+1. Open a browser window for you to log in to DiSH
+2. Automatically detect when you've reached the dashboard
+3. Capture your cookie, team ID, and member ID
+4. Save them to your `.env` file
+
+### Manual credential retrieval
+
+If the automatic method doesn't work, you can retrieve credentials manually:
+
+#### Getting your `connect.sid` cookie
 1. Log in to DiSH in your browser.
 2. Open Developer Tools (F12 / Cmd+Option+I).
 3. In Application/Storage > Cookies, select the DiSH domain.
 4. Copy the `connect.sid` value (looks like `s%3A...`).
 5. In your `.env` file, set `DISH_COOKIE` to `connect.sid=<value>`.
 
-### Getting your team and member IDs
+#### Getting your team and member IDs
 1. Log in to DiSH in your browser.
 2. Open Developer Tools (F12 / Cmd+Option+I).
-3. In Network tab, find the request labelled `booking-policy`
-4. In the request payload, look for the `team_id` and `member_id` values.
-5. Copy the `team_id` and `member_id` values (looks like `653ftv2a3l25h39b9k40e1029` and `9732dtgt60312dghe6`).
-6. In your `.env` file, set `TEAM_ID` to `team_id=<value>` and `MEMBER_ID` to `member_id=<value>`.
+3. In the Network tab, find a request to `occurrences` (or `booking-policy`).
+4. In the request URL or payload, look for the `team` and `member` values.
+5. In your `.env` file, set `TEAM_ID` and `MEMBER_ID` to the respective values.
 
-**Keep this secret.** Do not commit cookies, team IDs or member IDs, or .env files to source control; regenerate the cookie if it stops working or was ever exposed.
+**Keep this secret.** Do not commit cookies, team IDs, member IDs, or `.env` files to source control. Regenerate the cookie if it stops working or was ever exposed.
 
 ## Run the MCP server
 ```bash
@@ -86,4 +107,4 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-> The cookie expires periodically; grab a fresh value if authentication fails.
+> The cookie expires periodically. Run `uv run src/get_credentials.py` to get fresh credentials if authentication fails.
