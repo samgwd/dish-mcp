@@ -1,6 +1,8 @@
 """MCP server for booking rooms via DiSH."""
 
+import argparse
 import os
+from pathlib import Path
 from typing import Any
 
 from book_room import book_room as book_room_api
@@ -11,9 +13,14 @@ from cancel_booking import (
 from cancel_booking import (
     format_cancellation_response,
 )
+from dotenv import load_dotenv
 from fastmcp import Context, FastMCP
 from get_room_availability import extract_room_availability, get_room_availability
 from utils.type_defs import DatetimeRange, UserInfo
+
+# Load .env from the dish-mcp directory
+_env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(_env_path)
 
 DEFAULT_RESOURCE_IDS = [
     "6422bced61d5854ab3fedd62",  # Boyle
@@ -273,3 +280,43 @@ def cancel_booking(
 
     except Exception as e:
         return f"Error cancelling booking: {str(e)}"
+
+
+DEFAULT_PORT = 8000
+DEFAULT_HOST = "127.0.0.1"
+
+
+def _parse_args() -> argparse.Namespace:
+    """Parse command line arguments for server configuration.
+
+    Returns:
+        argparse.Namespace: Parsed arguments.
+    """
+    parser = argparse.ArgumentParser(description="DiSH MCP Server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "http"],
+        default=os.environ.get("MCP_TRANSPORT", "stdio"),
+        help="Transport type (default: stdio, or MCP_TRANSPORT env var)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("MCP_PORT", DEFAULT_PORT)),
+        help=f"Port for HTTP transport (default: {DEFAULT_PORT}, or MCP_PORT env var)",
+    )
+    parser.add_argument(
+        "--host",
+        default=os.environ.get("MCP_HOST", DEFAULT_HOST),
+        help=f"Host for HTTP transport (default: {DEFAULT_HOST}, or MCP_HOST env var)",
+    )
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = _parse_args()
+
+    if args.transport == "http":
+        mcp.run(transport="sse", host=args.host, port=args.port)
+    else:
+        mcp.run(transport="stdio")

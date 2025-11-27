@@ -28,6 +28,11 @@ The server needs three environment variables:
 - `TEAM_ID` — your DiSH team ID
 - `MEMBER_ID` — your DiSH member ID
 
+Optional transport configuration (for HTTP mode):
+- `MCP_TRANSPORT` — `stdio` (default) or `http`
+- `MCP_PORT` — port for HTTP transport (default: `8000`)
+- `MCP_HOST` — host for HTTP transport (default: `127.0.0.1`)
+
 ### Automatic credential retrieval (recommended)
 
 The easiest way to get your credentials is to use the included script:
@@ -67,9 +72,29 @@ If the automatic method doesn't work, you can retrieve credentials manually:
 **Keep this secret.** Do not commit cookies, team IDs, member IDs, or `.env` files to source control. Regenerate the cookie if it stops working or was ever exposed.
 
 ## Run the MCP server
+
+### stdio transport (default)
+For use with Cursor or Claude Desktop:
 ```bash
 uv run fastmcp run src/mcp_server.py
 ```
+
+### HTTP transport
+For remote access or web-based clients:
+```bash
+# Default: http://127.0.0.1:8000
+uv run python src/mcp_server.py --transport http
+
+# Custom port and host
+uv run python src/mcp_server.py --transport http --port 3000 --host 0.0.0.0
+```
+
+Or using environment variables:
+```bash
+MCP_TRANSPORT=http MCP_PORT=8000 uv run python src/mcp_server.py
+```
+
+The HTTP server exposes an SSE endpoint at `http://<host>:<port>/sse`.
 
 ## Configure your client
 
