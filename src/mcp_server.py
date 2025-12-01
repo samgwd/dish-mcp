@@ -135,56 +135,6 @@ def _format_availability_summary(availability: dict[str, Any]) -> str:
     return "\n".join(output)
 
 
-@mcp.tool
-def check_availability_and_list_bookings(
-    datetime_range: DatetimeRange,
-    resource_ids: list[str] | None = None,
-    cookie: str | None = None,
-    ctx: Context | None = None,
-) -> str:
-    """Check room availability for the DiSH API and list bookings for a room and date range.
-
-    Args:
-        datetime_range: Datetime range for the query
-        resource_ids: Optional list of room resource IDs to query.
-        cookie: Authentication cookie. If not provided, looks for DISH_COOKIE env var.
-        ctx: Context object.
-
-    Returns:
-        str: The availability summary.
-    """
-    if not cookie:
-        cookie = os.environ.get("DISH_COOKIE")
-
-    if not cookie:
-        return (
-            "Error: No authentication cookie provided. Please provide a cookie or set DISH_COOKIE"
-            " environment variable."
-        )
-
-    resource_ids = _resolve_resource_ids(resource_ids)
-
-    try:
-        response = get_room_availability(
-            resource_ids=resource_ids,
-            datetime_range=datetime_range,
-            cookie=cookie,
-        )
-
-        if response.status_code != 200:  # noqa: PLR2004
-            return f"Error: API returned status {response.status_code}"
-
-        bookings_data = response.json()
-        availability = extract_room_availability(
-            bookings_data, datetime_range, queried_room_ids=resource_ids
-        )
-
-        return _format_availability_summary(availability)
-
-    except Exception as e:
-        return f"Error checking availability: {str(e)}"
-
-
 def _resolve_cookie(cookie: str | None) -> str | None:
     """Resolve cookie from parameter or environment variable.
 
@@ -246,6 +196,54 @@ def _validate_booking_credentials(
         )
 
     return resolved_cookie, resolved_user_info
+
+
+@mcp.tool
+def check_availability_and_list_bookings(
+    datetime_range: DatetimeRange,
+    resource_ids: list[str] | None = None,
+    cookie: str | None = None,
+    ctx: Context | None = None,
+) -> str:
+    """Check room availability for the DiSH API and list bookings for a room and date range.
+
+    Args:
+        datetime_range: Datetime range for the query
+        resource_ids: Optional list of room resource IDs to query.
+        cookie: Authentication cookie. If not provided, looks for DISH_COOKIE env var.
+        ctx: Context object.
+
+    Returns:
+        str: The availability summary.
+    """
+    resolved_cookie = _resolve_cookie(cookie)
+    if not resolved_cookie:
+        return (
+            "Error: No authentication cookie provided. Please provide a cookie or set DISH_COOKIE"
+            " environment variable."
+        )
+
+    resource_ids = _resolve_resource_ids(resource_ids)
+
+    try:
+        response = get_room_availability(
+            resource_ids=resource_ids,
+            datetime_range=datetime_range,
+            cookie=resolved_cookie,
+        )
+
+        if response.status_code != 200:  # noqa: PLR2004
+            return f"Error: API returned status {response.status_code}"
+
+        bookings_data = response.json()
+        availability = extract_room_availability(
+            bookings_data, datetime_range, queried_room_ids=resource_ids
+        )
+
+        return _format_availability_summary(availability)
+
+    except Exception as e:
+        return f"Error checking availability: {str(e)}"
 
 
 @mcp.tool
@@ -314,10 +312,8 @@ def cancel_booking(
         cookie: Authentication cookie. If not provided, looks for DISH_COOKIE env var.
         skip_cancellation_policy: Whether to skip cancellation policy (default: False)
     """
-    if not cookie:
-        cookie = os.environ.get("DISH_COOKIE")
-
-    if not cookie:
+    resolved_cookie = _resolve_cookie(cookie)
+    if not resolved_cookie:
         return (
             "Error: No authentication cookie provided. Please provide a cookie or set DISH_COOKIE"
             " environment variable."
@@ -326,7 +322,7 @@ def cancel_booking(
     try:
         response = cancel_booking_api(
             booking_id=booking_id,
-            cookie=cookie,
+            cookie=resolved_cookie,
             skip_cancellation_policy=skip_cancellation_policy,
         )
 
