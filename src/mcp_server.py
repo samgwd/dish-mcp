@@ -185,11 +185,74 @@ def check_availability_and_list_bookings(
         return f"Error checking availability: {str(e)}"
 
 
+def _resolve_cookie(cookie: str | None) -> str | None:
+    """Resolve cookie from parameter or environment variable.
+
+    Args:
+        cookie: Optional cookie from the tool call.
+
+    Returns:
+        str | None: The resolved cookie, or None if not available.
+    """
+    return cookie or os.environ.get("DISH_COOKIE")
+
+
+def _resolve_user_info(user_info: UserInfo | None) -> UserInfo | None:
+    """Resolve user info from parameter or environment variables.
+
+    Args:
+        user_info: Optional user info from the tool call.
+
+    Returns:
+        UserInfo | None: The resolved user info, or None if not available.
+    """
+    if user_info:
+        return user_info
+
+    team_id = os.environ.get("TEAM_ID")
+    member_id = os.environ.get("MEMBER_ID")
+
+    if team_id and member_id:
+        return {"team_id": team_id, "member_id": member_id}
+
+    return None
+
+
+def _validate_booking_credentials(
+    cookie: str | None, user_info: UserInfo | None
+) -> tuple[str, UserInfo] | str:
+    """Validate and resolve booking credentials.
+
+    Args:
+        cookie: Optional cookie from the tool call.
+        user_info: Optional user info from the tool call.
+
+    Returns:
+        tuple[str, UserInfo]: Resolved cookie and user info if valid.
+        str: Error message if validation fails.
+    """
+    resolved_cookie = _resolve_cookie(cookie)
+    if not resolved_cookie:
+        return (
+            "Error: No authentication cookie provided. Please provide a cookie or set DISH_COOKIE"
+            " environment variable."
+        )
+
+    resolved_user_info = _resolve_user_info(user_info)
+    if not resolved_user_info:
+        return (
+            "Error: No user information provided. Please provide user_info or set TEAM_ID and "
+            "MEMBER_ID environment variables."
+        )
+
+    return resolved_cookie, resolved_user_info
+
+
 @mcp.tool
 def book_room(
     datetime_range: DatetimeRange,
     meeting_room_name: str,
-    user_info: UserInfo,
+    user_info: UserInfo | None = None,
     cookie: str | None = None,
     summary: str = "Fuzzy Labs Meeting",
 ) -> str:
@@ -198,18 +261,15 @@ def book_room(
     Args:
         datetime_range: Datetime range for the booking
         meeting_room_name: Name of the meeting room
-        user_info: User information
+        user_info: User information. If not provided, looks for TEAM_ID and MEMBER_ID env vars.
         cookie: Authentication cookie. If not provided, looks for DISH_COOKIE env var.
         summary: Title of the booking: default to "meeting"
     """
-    if not cookie:
-        cookie = os.environ.get("DISH_COOKIE")
+    credentials = _validate_booking_credentials(cookie, user_info)
+    if isinstance(credentials, str):
+        return credentials
 
-    if not cookie:
-        return (
-            "Error: No authentication cookie provided. Please provide a cookie or set DISH_COOKIE"
-            " environment variable."
-        )
+    resolved_cookie, resolved_user_info = credentials
 
     try:
         response = book_room_api(
@@ -219,10 +279,10 @@ def book_room(
             },
             meeting_room_name=meeting_room_name,
             user_info={
-                "team_id": user_info["team_id"],
-                "member_id": user_info["member_id"],
+                "team_id": resolved_user_info["team_id"],
+                "member_id": resolved_user_info["member_id"],
             },
-            cookie=cookie,
+            cookie=resolved_cookie,
             summary=summary,
         )
 
