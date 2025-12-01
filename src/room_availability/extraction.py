@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from utils.constants import ROOM_ID_TO_NAME
@@ -13,15 +13,19 @@ NO_BOOKINGS_NOTE = "No bookings found - room completely available"
 
 
 def _iso_to_datetime(value: str) -> datetime:
-    """Convert an ISO string to a datetime object.
+    """Convert an ISO string to a timezone-aware datetime object.
 
     Args:
         value: The ISO string to convert.
 
     Returns:
-        datetime: The datetime object.
+        datetime: The timezone-aware datetime object (assumes UTC if no timezone).
     """
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    # If no timezone info, assume UTC
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 def _calculate_range(start_date: str, end_date: str) -> tuple[datetime, datetime, int]:
