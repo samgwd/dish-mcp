@@ -48,8 +48,8 @@ def get_room_availability(
 
     params = {
         "resourceId": resource_id_str,
-        "start": datetime_range["start_datetime"],
-        "end": datetime_range["end_datetime"],
+        "start": datetime_range.start_datetime,
+        "end": datetime_range.end_datetime,
         "$select": select,
         "$populate": populate,
     }

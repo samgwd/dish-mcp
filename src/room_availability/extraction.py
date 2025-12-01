@@ -285,9 +285,7 @@ def extract_room_availability(
     Returns:
         dict[str, dict[str, Any]]: The availability.
     """
-    range_details = _calculate_range(
-        datetime_range["start_datetime"], datetime_range["end_datetime"]
-    )
+    range_details = _calculate_range(datetime_range.start_datetime, datetime_range.end_datetime)
     range_start, range_end, total_range_minutes = range_details
 
     if not bookings:

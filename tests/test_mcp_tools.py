@@ -27,10 +27,10 @@ class TestCheckAvailabilityAndListBookings:
 
     def test_returns_error_when_no_cookie_provided(self) -> None:
         """Return error when no cookie provided and env var not set."""
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T09:00:00Z",
-            "end_datetime": "2025-01-15T17:00:00Z",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T09:00:00Z",
+            end_datetime="2025-01-15T17:00:00Z",
+        )
 
         # Ensure env var is not set
         with patch.dict(os.environ, {}, clear=True):
@@ -41,10 +41,10 @@ class TestCheckAvailabilityAndListBookings:
 
     def test_uses_env_cookie_when_not_provided(self) -> None:
         """Use DISH_COOKIE environment variable when cookie not provided."""
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T09:00:00Z",
-            "end_datetime": "2025-01-15T17:00:00Z",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T09:00:00Z",
+            end_datetime="2025-01-15T17:00:00Z",
+        )
 
         with (
             patch.dict(os.environ, {"DISH_COOKIE": "connect.sid=env_cookie"}),
@@ -72,10 +72,10 @@ class TestCheckAvailabilityAndListBookings:
             status=200,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T09:00:00Z",
-            "end_datetime": "2025-01-15T17:00:00Z",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T09:00:00Z",
+            end_datetime="2025-01-15T17:00:00Z",
+        )
 
         result = check_availability_and_list_bookings(
             datetime_range,
@@ -96,10 +96,10 @@ class TestCheckAvailabilityAndListBookings:
             status=401,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T09:00:00Z",
-            "end_datetime": "2025-01-15T17:00:00Z",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T09:00:00Z",
+            end_datetime="2025-01-15T17:00:00Z",
+        )
 
         result = check_availability_and_list_bookings(
             datetime_range,
@@ -118,10 +118,10 @@ class TestCheckAvailabilityAndListBookings:
             status=200,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T09:00:00Z",
-            "end_datetime": "2025-01-15T17:00:00Z",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T09:00:00Z",
+            end_datetime="2025-01-15T17:00:00Z",
+        )
         custom_ids = ["custom_id_1", "custom_id_2"]
 
         check_availability_and_list_bookings(
@@ -157,10 +157,10 @@ class TestCheckAvailabilityAndListBookings:
             status=200,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T09:00:00Z",
-            "end_datetime": "2025-01-15T17:00:00Z",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T09:00:00Z",
+            end_datetime="2025-01-15T17:00:00Z",
+        )
 
         result = check_availability_and_list_bookings(
             datetime_range,
@@ -176,14 +176,14 @@ class TestBookRoomTool:
 
     def test_returns_error_when_no_cookie_provided(self) -> None:
         """Return error when no cookie provided and env var not set."""
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T10:00:00.000Z",
-            "end_datetime": "2025-01-15T11:00:00.000Z",
-        }
-        user_info: UserInfo = {
-            "team_id": "team123",
-            "member_id": "member456",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T10:00:00.000Z",
+            end_datetime="2025-01-15T11:00:00.000Z",
+        )
+        user_info = UserInfo(
+            team_id="team123",
+            member_id="member456",
+        )
 
         with patch.dict(os.environ, {}, clear=True):
             result = book_room(
@@ -197,14 +197,14 @@ class TestBookRoomTool:
 
     def test_uses_env_cookie_when_not_provided(self) -> None:
         """Use DISH_COOKIE environment variable when cookie not provided."""
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T10:00:00.000Z",
-            "end_datetime": "2025-01-15T11:00:00.000Z",
-        }
-        user_info: UserInfo = {
-            "team_id": "team123",
-            "member_id": "member456",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T10:00:00.000Z",
+            end_datetime="2025-01-15T11:00:00.000Z",
+        )
+        user_info = UserInfo(
+            team_id="team123",
+            member_id="member456",
+        )
 
         with (
             patch.dict(os.environ, {"DISH_COOKIE": "connect.sid=env_cookie"}),
@@ -245,14 +245,14 @@ class TestBookRoomTool:
             status=201,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T10:00:00.000Z",
-            "end_datetime": "2025-01-15T11:00:00.000Z",
-        }
-        user_info: UserInfo = {
-            "team_id": "team123",
-            "member_id": "member456",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T10:00:00.000Z",
+            end_datetime="2025-01-15T11:00:00.000Z",
+        )
+        user_info = UserInfo(
+            team_id="team123",
+            member_id="member456",
+        )
 
         result = book_room(
             datetime_range=datetime_range,
@@ -274,14 +274,14 @@ class TestBookRoomTool:
             status=409,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T10:00:00.000Z",
-            "end_datetime": "2025-01-15T11:00:00.000Z",
-        }
-        user_info: UserInfo = {
-            "team_id": "team123",
-            "member_id": "member456",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T10:00:00.000Z",
+            end_datetime="2025-01-15T11:00:00.000Z",
+        )
+        user_info = UserInfo(
+            team_id="team123",
+            member_id="member456",
+        )
 
         result = book_room(
             datetime_range=datetime_range,
@@ -295,14 +295,14 @@ class TestBookRoomTool:
 
     def test_returns_error_on_unknown_room(self) -> None:
         """Return error for unknown room name."""
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T10:00:00.000Z",
-            "end_datetime": "2025-01-15T11:00:00.000Z",
-        }
-        user_info: UserInfo = {
-            "team_id": "team123",
-            "member_id": "member456",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T10:00:00.000Z",
+            end_datetime="2025-01-15T11:00:00.000Z",
+        )
+        user_info = UserInfo(
+            team_id="team123",
+            member_id="member456",
+        )
 
         result = book_room(
             datetime_range=datetime_range,
@@ -328,14 +328,14 @@ class TestBookRoomTool:
             status=201,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T10:00:00.000Z",
-            "end_datetime": "2025-01-15T11:00:00.000Z",
-        }
-        user_info: UserInfo = {
-            "team_id": "team123",
-            "member_id": "member456",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T10:00:00.000Z",
+            end_datetime="2025-01-15T11:00:00.000Z",
+        )
+        user_info = UserInfo(
+            team_id="team123",
+            member_id="member456",
+        )
 
         book_room(
             datetime_range=datetime_range,

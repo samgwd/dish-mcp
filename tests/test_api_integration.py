@@ -54,10 +54,10 @@ class TestGetRoomAvailability:
             status=200,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T09:00:00Z",
-            "end_datetime": "2025-01-15T17:00:00Z",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T09:00:00Z",
+            end_datetime="2025-01-15T17:00:00Z",
+        )
         resource_ids = ["id1", "id2"]
 
         get_room_availability(
@@ -84,10 +84,10 @@ class TestGetRoomAvailability:
             status=200,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T09:00:00Z",
-            "end_datetime": "2025-01-15T17:00:00Z",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T09:00:00Z",
+            end_datetime="2025-01-15T17:00:00Z",
+        )
 
         get_room_availability(
             resource_ids=["id1"],
@@ -110,10 +110,10 @@ class TestGetRoomAvailability:
             status=200,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T09:00:00Z",
-            "end_datetime": "2025-01-15T17:00:00Z",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T09:00:00Z",
+            end_datetime="2025-01-15T17:00:00Z",
+        )
 
         response = get_room_availability(
             resource_ids=["id1"],
@@ -134,10 +134,10 @@ class TestGetRoomAvailability:
             status=401,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T09:00:00Z",
-            "end_datetime": "2025-01-15T17:00:00Z",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T09:00:00Z",
+            end_datetime="2025-01-15T17:00:00Z",
+        )
 
         with pytest.raises(Exception):  # noqa: B017
             get_room_availability(
@@ -156,10 +156,10 @@ class TestGetRoomAvailability:
             status=200,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T09:00:00Z",
-            "end_datetime": "2025-01-15T17:00:00Z",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T09:00:00Z",
+            end_datetime="2025-01-15T17:00:00Z",
+        )
 
         get_room_availability(
             resource_ids=["id1"],

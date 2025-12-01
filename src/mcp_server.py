@@ -163,7 +163,7 @@ def _resolve_user_info(user_info: UserInfo | None) -> UserInfo | None:
     member_id = os.environ.get("MEMBER_ID")
 
     if team_id and member_id:
-        return {"team_id": team_id, "member_id": member_id}
+        return UserInfo(team_id=team_id, member_id=member_id)
 
     return None
 
@@ -271,15 +271,9 @@ def book_room(
 
     try:
         response = book_room_api(
-            datetime_range={
-                "start_datetime": datetime_range["start_datetime"],
-                "end_datetime": datetime_range["end_datetime"],
-            },
+            datetime_range=datetime_range,
             meeting_room_name=meeting_room_name,
-            user_info={
-                "team_id": resolved_user_info["team_id"],
-                "member_id": resolved_user_info["member_id"],
-            },
+            user_info=resolved_user_info,
             cookie=resolved_cookie,
             summary=summary,
         )
