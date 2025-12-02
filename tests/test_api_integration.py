@@ -186,14 +186,14 @@ class TestBookRoom:
             status=201,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T10:00:00.000Z",
-            "end_datetime": "2025-01-15T11:00:00.000Z",
-        }
-        user_info: UserInfo = {
-            "team_id": "team123",
-            "member_id": "member456",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T10:00:00.000Z",
+            end_datetime="2025-01-15T11:00:00.000Z",
+        )
+        user_info = UserInfo(
+            team_id="team123",
+            member_id="member456",
+        )
 
         book_room(
             datetime_range=datetime_range,
@@ -227,14 +227,14 @@ class TestBookRoom:
             status=201,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T10:00:00.000Z",
-            "end_datetime": "2025-01-15T11:00:00.000Z",
-        }
-        user_info: UserInfo = {
-            "team_id": "team123",
-            "member_id": "member456",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T10:00:00.000Z",
+            end_datetime="2025-01-15T11:00:00.000Z",
+        )
+        user_info = UserInfo(
+            team_id="team123",
+            member_id="member456",
+        )
 
         book_room(
             datetime_range=datetime_range,
@@ -250,14 +250,14 @@ class TestBookRoom:
 
     def test_raises_on_unknown_room(self) -> None:
         """Raise ValueError for unknown room name."""
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T10:00:00.000Z",
-            "end_datetime": "2025-01-15T11:00:00.000Z",
-        }
-        user_info: UserInfo = {
-            "team_id": "team123",
-            "member_id": "member456",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T10:00:00.000Z",
+            end_datetime="2025-01-15T11:00:00.000Z",
+        )
+        user_info = UserInfo(
+            team_id="team123",
+            member_id="member456",
+        )
 
         with pytest.raises(ValueError, match="Unknown meeting room"):
             book_room(
@@ -279,14 +279,14 @@ class TestBookRoom:
             status=201,
         )
 
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T10:00:00.000Z",
-            "end_datetime": "2025-01-15T11:00:00.000Z",
-        }
-        user_info: UserInfo = {
-            "team_id": "team123",
-            "member_id": "member456",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T10:00:00.000Z",
+            end_datetime="2025-01-15T11:00:00.000Z",
+        )
+        user_info = UserInfo(
+            team_id="team123",
+            member_id="member456",
+        )
 
         response = book_room(
             datetime_range=datetime_range,
