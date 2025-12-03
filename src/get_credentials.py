@@ -383,7 +383,6 @@ def get_dish_credentials() -> DishCredentials:
     stored_team_id = os.getenv("TEAM_ID")
     stored_member_id = os.getenv("MEMBER_ID")
 
-    # If we have all credentials stored, return them
     if stored_cookie and stored_team_id and stored_member_id:
         return DishCredentials(
             cookie=stored_cookie,
@@ -391,7 +390,6 @@ def get_dish_credentials() -> DishCredentials:
             member_id=stored_member_id,
         )
 
-    # Otherwise, get fresh credentials interactively
     return asyncio.run(get_dish_credentials_interactive())
 
 

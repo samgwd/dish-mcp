@@ -9,13 +9,11 @@ from pydantic import BaseModel, model_validator
 
 def _parse_string_to_dict(data: str) -> Any:
     """Try to parse a string as JSON or Python dict literal."""
-    # First try JSON (double quotes)
     try:
         return json.loads(data)
     except json.JSONDecodeError:
         pass
 
-    # Then try Python literal (single quotes) using ast.literal_eval
     try:
         result = ast.literal_eval(data)
         if isinstance(result, dict):
@@ -23,7 +21,6 @@ def _parse_string_to_dict(data: str) -> Any:
     except (ValueError, SyntaxError):
         pass
 
-    # Return original string if parsing fails
     return data
 
 

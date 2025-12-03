@@ -22,7 +22,6 @@ def _iso_to_datetime(value: str) -> datetime:
         datetime: The timezone-aware datetime object (assumes UTC if no timezone).
     """
     dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    # If no timezone info, assume UTC
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt
