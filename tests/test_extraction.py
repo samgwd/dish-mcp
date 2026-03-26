@@ -51,8 +51,8 @@ class TestCalculateRange:
     def test_calculate_8_hour_range(self, sample_datetime_range: DatetimeRange) -> None:
         """Calculate range for an 8-hour period (9am-5pm)."""
         range_start, range_end, total_minutes = _calculate_range(
-            sample_datetime_range["start_datetime"],
-            sample_datetime_range["end_datetime"],
+            sample_datetime_range.start_datetime,
+            sample_datetime_range.end_datetime,
         )
 
         assert range_start == datetime(2025, 1, 15, 9, 0, 0, tzinfo=timezone.utc)
@@ -62,8 +62,8 @@ class TestCalculateRange:
     def test_calculate_1_hour_range(self, sample_datetime_range_short: DatetimeRange) -> None:
         """Calculate range for a 1-hour period."""
         range_start, range_end, total_minutes = _calculate_range(
-            sample_datetime_range_short["start_datetime"],
-            sample_datetime_range_short["end_datetime"],
+            sample_datetime_range_short.start_datetime,
+            sample_datetime_range_short.end_datetime,
         )
 
         assert total_minutes == 60
@@ -649,10 +649,10 @@ class TestEdgeCases:
             "end": {"dateTime": "2025-01-15T11:00:00+01:00"},
             "summary": "TZ test",
         }
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T09:00:00+01:00",
-            "end_datetime": "2025-01-15T17:00:00+01:00",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T09:00:00+01:00",
+            end_datetime="2025-01-15T17:00:00+01:00",
+        )
 
         result = extract_room_availability(
             [booking],
@@ -665,10 +665,10 @@ class TestEdgeCases:
 
     def test_very_short_datetime_range(self, boyle_room_id: str) -> None:
         """Handle very short datetime ranges (1 minute)."""
-        datetime_range: DatetimeRange = {
-            "start_datetime": "2025-01-15T10:00:00Z",
-            "end_datetime": "2025-01-15T10:01:00Z",
-        }
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T10:00:00Z",
+            end_datetime="2025-01-15T10:01:00Z",
+        )
 
         result = extract_room_availability(
             [],

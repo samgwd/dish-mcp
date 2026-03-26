@@ -23,12 +23,39 @@ uv sync
 ```
 
 ## Configuration
-The server needs three environment variables:
-- `DISH_COOKIE` — your DiSH `connect.sid` session cookie
+Required:
 - `TEAM_ID` — your DiSH team ID
 - `MEMBER_ID` — your DiSH member ID
 
-### Automatic credential retrieval (recommended)
+Authentication:
+- `DISH_COOKIE` — your DiSH `connect.sid` session cookie
+- `DISH_EMAIL` — optional, enables non-interactive login when the cookie is missing or expired
+- `DISH_PASSWORD` — optional, enables non-interactive login when the cookie is missing or expired
+
+Optional transport configuration (for HTTP mode):
+- `MCP_TRANSPORT` — `stdio` (default) or `http`
+- `MCP_PORT` — port for HTTP transport (default: `8000`)
+- `MCP_HOST` — host for HTTP transport (default: `127.0.0.1`)
+
+### Non-interactive cookie refresh
+
+If you want Claude to keep working when `connect.sid` expires, put these values in `.env`:
+
+```bash
+TEAM_ID=<YOUR_TEAM_ID>
+MEMBER_ID=<YOUR_MEMBER_ID>
+DISH_EMAIL=you@example.com
+DISH_PASSWORD=<YOUR_PASSWORD>
+```
+
+With that setup:
+1. The MCP will create `DISH_COOKIE` automatically if it is missing.
+2. If the API returns `401` or `403`, the MCP will log in again headlessly, update `DISH_COOKIE` in `.env`, and retry the request once.
+3. `TEAM_ID` and `MEMBER_ID` stay stable in `.env`; only the session cookie rotates.
+
+This only works if your DiSH account supports direct email/password login. If your login goes through Google, Microsoft, or another SSO flow, there is no silent refresh path in this repo and you will need the browser-based flow below.
+
+### Automatic credential retrieval (manual browser flow)
 
 The easiest way to get your credentials is to use the included script:
 
@@ -67,9 +94,29 @@ If the automatic method doesn't work, you can retrieve credentials manually:
 **Keep this secret.** Do not commit cookies, team IDs, member IDs, or `.env` files to source control. Regenerate the cookie if it stops working or was ever exposed.
 
 ## Run the MCP server
+
+### stdio transport (default)
+For use with Cursor or Claude Desktop:
 ```bash
 uv run fastmcp run src/mcp_server.py
 ```
+
+### HTTP transport
+For remote access or web-based clients:
+```bash
+# Default: http://127.0.0.1:8000
+uv run python src/mcp_server.py --transport http
+
+# Custom port and host
+uv run python src/mcp_server.py --transport http --port 3000 --host 0.0.0.0
+```
+
+Or using environment variables:
+```bash
+MCP_TRANSPORT=http MCP_PORT=8000 uv run python src/mcp_server.py
+```
+
+The HTTP server exposes an SSE endpoint at `http://<host>:<port>/sse`.
 
 ## Configure your client
 
@@ -79,11 +126,6 @@ uv run fastmcp run src/mcp_server.py
   "command": "<PATH_TO_VENV>/bin/fastmcp",
   "args": ["run", "<PATH_TO_REPO>/src/mcp_server.py"],
   "cwd": "<PATH_TO_REPO>",
-  "env": {
-    "DISH_COOKIE": "<connect.sid=...>",
-    "TEAM_ID": "<YOUR_TEAM_ID>",
-    "MEMBER_ID": "<YOUR_MEMBER_ID>"
-  },
   "transport": "stdio"
 }
 ```
@@ -96,15 +138,10 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
     "Dish MCP": {
       "command": "<PATH_TO_VENV>/bin/fastmcp",
       "args": ["run", "<PATH_TO_REPO>/src/mcp_server.py"],
-      "cwd": "<PATH_TO_REPO>",
-      "env": {
-        "DISH_COOKIE": "<connect.sid=...>",
-        "TEAM_ID": "<YOUR_TEAM_ID>",
-        "MEMBER_ID": "<YOUR_MEMBER_ID>"
-      }
+      "cwd": "<PATH_TO_REPO>"
     }
   }
 }
 ```
 
-> The cookie expires periodically. Run `uv run src/get_credentials.py` to get fresh credentials if authentication fails.
+The server loads auth values from `.env` automatically. Keep `.env` as the source of truth for `DISH_COOKIE`, `TEAM_ID`, `MEMBER_ID`, `DISH_EMAIL`, and `DISH_PASSWORD` instead of hardcoding those values in your Claude config.

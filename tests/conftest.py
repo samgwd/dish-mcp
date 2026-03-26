@@ -9,19 +9,19 @@ from utils.type_defs import DatetimeRange
 @pytest.fixture
 def sample_datetime_range() -> DatetimeRange:
     """A standard datetime range for testing (9am-5pm on a single day)."""
-    return {
-        "start_datetime": "2025-01-15T09:00:00Z",
-        "end_datetime": "2025-01-15T17:00:00Z",
-    }
+    return DatetimeRange(
+        start_datetime="2025-01-15T09:00:00Z",
+        end_datetime="2025-01-15T17:00:00Z",
+    )
 
 
 @pytest.fixture
 def sample_datetime_range_short() -> DatetimeRange:
     """A short datetime range for testing (1 hour)."""
-    return {
-        "start_datetime": "2025-01-15T10:00:00Z",
-        "end_datetime": "2025-01-15T11:00:00Z",
-    }
+    return DatetimeRange(
+        start_datetime="2025-01-15T10:00:00Z",
+        end_datetime="2025-01-15T11:00:00Z",
+    )
 
 
 @pytest.fixture

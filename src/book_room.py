@@ -17,20 +17,20 @@ def book_room(
     """Book a room using the DiSH API.
 
     Args:
-        datetime_range: Dict with 'start_datetime' and 'end_datetime' in ISO format
+        datetime_range: DatetimeRange with start_datetime and end_datetime in ISO format
             (e.g., "2025-11-19T19:00:00.000Z")
         meeting_room_name: Name of the meeting room
-        user_info: Dict with 'team_id' and 'member_id'
+        user_info: UserInfo with team_id and member_id
         cookie: Authentication cookie
         summary: Title of the booking
 
     Returns:
         requests.Response: The HTTP response object
     """
-    start_datetime = datetime_range["start_datetime"]
-    end_datetime = datetime_range["end_datetime"]
-    team_id = user_info["team_id"]
-    member_id = user_info["member_id"]
+    start_datetime = datetime_range.start_datetime
+    end_datetime = datetime_range.end_datetime
+    team_id = user_info.team_id
+    member_id = user_info.member_id
 
     # Get the resource ID for the meeting room
     resource_id = ROOM_NAME_TO_ID.get(meeting_room_name)
