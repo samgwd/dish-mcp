@@ -2,9 +2,12 @@
 
 import argparse
 import os
+import threading
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+import requests
 from book_room import book_room as book_room_api
 from book_room import format_booking_response
 from cancel_booking import (
@@ -15,18 +18,21 @@ from cancel_booking import (
 )
 from dotenv import load_dotenv
 from fastmcp import Context, FastMCP
+from get_credentials import DishCredentials, get_dish_credentials, save_credentials_to_env
 from get_room_availability import extract_room_availability, get_room_availability
 from utils.type_defs import DatetimeRange, UserInfo
 
 # Load .env from the dish-mcp directory
 _env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(_env_path)
+load_dotenv(_env_path, override=True)
 
 DEFAULT_RESOURCE_IDS = [
     "6422bced61d5854ab3fedd62",  # Boyle
     "6422bcd50340a914e68e661b",  # Pankhurst
     "6422bcff9814c9c32ed62d77",  # Turing
 ]
+AUTH_FAILURE_STATUS_CODES = {401, 403}
+_AUTH_REFRESH_LOCK = threading.Lock()
 
 mcp = FastMCP("Dish MCP")
 
@@ -147,6 +153,87 @@ def _resolve_cookie(cookie: str | None) -> str | None:
     return cookie or os.environ.get("DISH_COOKIE")
 
 
+def _can_auto_auth(cookie: str | None) -> bool:
+    """Return whether the server should manage authentication automatically."""
+    return cookie is None
+
+
+def _cache_credentials(credentials: DishCredentials) -> None:
+    """Persist refreshed credentials to the process and local .env file."""
+    os.environ["DISH_COOKIE"] = credentials.cookie
+    if credentials.team_id:
+        os.environ["TEAM_ID"] = credentials.team_id
+    if credentials.member_id:
+        os.environ["MEMBER_ID"] = credentials.member_id
+
+    save_credentials_to_env(credentials, _env_path)
+
+
+def _refresh_credentials(
+    force_refresh: bool,
+    failed_cookie: str | None = None,
+) -> DishCredentials:
+    """Load or refresh credentials without launching an interactive browser flow."""
+    with _AUTH_REFRESH_LOCK:
+        current_cookie = os.environ.get("DISH_COOKIE")
+        if force_refresh and failed_cookie and current_cookie and current_cookie != failed_cookie:
+            return DishCredentials(
+                cookie=current_cookie,
+                team_id=os.environ.get("TEAM_ID"),
+                member_id=os.environ.get("MEMBER_ID"),
+            )
+
+        credentials = get_dish_credentials(
+            force_refresh=force_refresh,
+            allow_interactive=False,
+        )
+        _cache_credentials(credentials)
+        return credentials
+
+
+def _ensure_cookie(cookie: str | None) -> str:
+    """Return a valid cookie, auto-authenticating when possible."""
+    resolved_cookie = _resolve_cookie(cookie)
+    if resolved_cookie:
+        return resolved_cookie
+
+    return _refresh_credentials(force_refresh=False).cookie
+
+
+def _is_auth_error(exc: requests.HTTPError) -> bool:
+    """Return whether the HTTP error represents an authentication failure."""
+    response = exc.response
+    return response is not None and response.status_code in AUTH_FAILURE_STATUS_CODES
+
+
+def _should_retry_auth(response: requests.Response) -> bool:
+    """Return whether the response should trigger automatic reauthentication."""
+    return response.status_code in AUTH_FAILURE_STATUS_CODES
+
+
+def _perform_authenticated_request(
+    request_fn: Callable[[str], requests.Response],
+    cookie: str | None,
+) -> requests.Response:
+    """Run an authenticated request and retry once after automatic reauthentication."""
+    resolved_cookie = _ensure_cookie(cookie)
+    auto_auth_enabled = _can_auto_auth(cookie)
+
+    try:
+        response = request_fn(resolved_cookie)
+    except requests.HTTPError as exc:
+        if auto_auth_enabled and _is_auth_error(exc):
+            refreshed = _refresh_credentials(force_refresh=True, failed_cookie=resolved_cookie)
+            return request_fn(refreshed.cookie)
+        raise
+
+    if auto_auth_enabled and _should_retry_auth(response):
+        refreshed = _refresh_credentials(force_refresh=True, failed_cookie=resolved_cookie)
+        return request_fn(refreshed.cookie)
+
+    return response
+
+
 def _resolve_user_info(user_info: UserInfo | None) -> UserInfo | None:
     """Resolve user info from parameter or environment variables.
 
@@ -181,12 +268,10 @@ def _validate_booking_credentials(
         tuple[str, UserInfo]: Resolved cookie and user info if valid.
         str: Error message if validation fails.
     """
-    resolved_cookie = _resolve_cookie(cookie)
-    if not resolved_cookie:
-        return (
-            "Error: No authentication cookie provided. Please provide a cookie or set DISH_COOKIE"
-            " environment variable."
-        )
+    try:
+        resolved_cookie = _ensure_cookie(cookie)
+    except RuntimeError as exc:
+        return f"Error: {exc}"
 
     resolved_user_info = _resolve_user_info(user_info)
     if not resolved_user_info:
@@ -216,20 +301,16 @@ def check_availability_and_list_bookings(
     Returns:
         str: The availability summary.
     """
-    resolved_cookie = _resolve_cookie(cookie)
-    if not resolved_cookie:
-        return (
-            "Error: No authentication cookie provided. Please provide a cookie or set DISH_COOKIE"
-            " environment variable."
-        )
-
-    resource_ids = _resolve_resource_ids(resource_ids)
+    resolved_resource_ids = _resolve_resource_ids(resource_ids)
 
     try:
-        response = get_room_availability(
-            resource_ids=resource_ids,
-            datetime_range=datetime_range,
-            cookie=resolved_cookie,
+        response = _perform_authenticated_request(
+            lambda active_cookie: get_room_availability(
+                resource_ids=resolved_resource_ids,
+                datetime_range=datetime_range,
+                cookie=active_cookie,
+            ),
+            cookie,
         )
 
         if response.status_code != 200:  # noqa: PLR2004
@@ -237,7 +318,7 @@ def check_availability_and_list_bookings(
 
         bookings_data = response.json()
         availability = extract_room_availability(
-            bookings_data, datetime_range, queried_room_ids=resource_ids
+            bookings_data, datetime_range, queried_room_ids=resolved_resource_ids
         )
 
         return _format_availability_summary(availability)
@@ -270,12 +351,15 @@ def book_room(
     resolved_cookie, resolved_user_info = credentials
 
     try:
-        response = book_room_api(
-            datetime_range=datetime_range,
-            meeting_room_name=meeting_room_name,
-            user_info=resolved_user_info,
-            cookie=resolved_cookie,
-            summary=summary,
+        response = _perform_authenticated_request(
+            lambda active_cookie: book_room_api(
+                datetime_range=datetime_range,
+                meeting_room_name=meeting_room_name,
+                user_info=resolved_user_info,
+                cookie=active_cookie,
+                summary=summary,
+            ),
+            cookie if _can_auto_auth(cookie) else resolved_cookie,
         )
 
         if response.status_code not in [200, 201]:
@@ -306,18 +390,14 @@ def cancel_booking(
         cookie: Authentication cookie. If not provided, looks for DISH_COOKIE env var.
         skip_cancellation_policy: Whether to skip cancellation policy (default: False)
     """
-    resolved_cookie = _resolve_cookie(cookie)
-    if not resolved_cookie:
-        return (
-            "Error: No authentication cookie provided. Please provide a cookie or set DISH_COOKIE"
-            " environment variable."
-        )
-
     try:
-        response = cancel_booking_api(
-            booking_id=booking_id,
-            cookie=resolved_cookie,
-            skip_cancellation_policy=skip_cancellation_policy,
+        response = _perform_authenticated_request(
+            lambda active_cookie: cancel_booking_api(
+                booking_id=booking_id,
+                cookie=active_cookie,
+                skip_cancellation_policy=skip_cancellation_policy,
+            ),
+            cookie,
         )
 
         if response.status_code not in [200, 201]:

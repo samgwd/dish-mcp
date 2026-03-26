@@ -5,11 +5,16 @@ from __future__ import annotations
 import asyncio
 import os
 import time
+from collections.abc import Coroutine
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Thread
+from typing import Any, TypeVar
 from urllib.parse import parse_qs, urlparse
 
 from playwright.async_api import Page, Request, async_playwright
+
+T = TypeVar("T")
 
 
 @dataclass
@@ -291,8 +296,68 @@ async def _extract_session_cookie(page: Page) -> str | None:
     return None
 
 
+def _run_coroutine(coro: Coroutine[Any, Any, T]) -> T:
+    """Run an async coroutine from synchronous code.
+
+    If the current thread already has a running event loop, execute the coroutine
+    in a temporary worker thread to avoid nested loop errors.
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+
+    result: dict[str, T] = {}
+    error: dict[str, BaseException] = {}
+
+    def runner() -> None:
+        try:
+            result["value"] = asyncio.run(coro)
+        except BaseException as exc:  # pragma: no cover - re-raised below
+            error["value"] = exc
+
+    thread = Thread(target=runner, daemon=True)
+    thread.start()
+    thread.join()
+
+    if "value" in error:
+        raise error["value"]
+
+    return result["value"]
+
+
+def _stored_credentials() -> DishCredentials:
+    """Return the currently configured credentials from environment variables."""
+    return DishCredentials(
+        cookie=os.getenv("DISH_COOKIE", ""),
+        team_id=os.getenv("TEAM_ID"),
+        member_id=os.getenv("MEMBER_ID"),
+    )
+
+
+def _headless_login_credentials() -> tuple[str | None, str | None]:
+    """Return login credentials for non-interactive authentication."""
+    return os.getenv("DISH_EMAIL"), os.getenv("DISH_PASSWORD")
+
+
+def _non_interactive_auth_error(force_refresh: bool) -> RuntimeError:
+    """Build a consistent error for missing automatic authentication credentials."""
+    if force_refresh:
+        message = (
+            "Authentication cookie refresh failed because DISH_EMAIL and DISH_PASSWORD are not "
+            "configured for non-interactive reauthentication."
+        )
+    else:
+        message = (
+            "No authentication cookie available. Set DISH_COOKIE or provide DISH_EMAIL and "
+            "DISH_PASSWORD so the MCP can authenticate automatically."
+        )
+
+    return RuntimeError(message)
+
+
 async def get_dish_cookie_headless(email: str, password: str) -> str:
-    """Attempt headless login with email/password (may not work with SSO).
+    """Attempt headless login with email/password.
 
     Args:
         email: User's email address
@@ -364,33 +429,73 @@ def get_dish_cookie() -> str:
     Raises:
         RuntimeError: If the cookie cannot be retrieved
     """
+    return get_dish_cookie_with_options()
+
+
+def get_dish_cookie_with_options(
+    force_refresh: bool = False,
+    allow_interactive: bool = True,
+) -> str:
+    """Get a Dish cookie, optionally forcing a fresh login.
+
+    Args:
+        force_refresh: When True, ignore the stored cookie and perform a fresh login.
+        allow_interactive: When True, fall back to interactive login if headless auth
+            is not configured.
+
+    Returns:
+        The full cookie string in format ``connect.sid=<value>``.
+
+    Raises:
+        RuntimeError: If authentication cannot be completed.
+    """
     stored_cookie = os.getenv("DISH_COOKIE")
-    if stored_cookie:
+    if stored_cookie and not force_refresh:
         return stored_cookie
 
-    return asyncio.run(get_dish_cookie_interactive())
+    email, password = _headless_login_credentials()
+    if email and password:
+        return _run_coroutine(get_dish_cookie_headless(email, password))
+
+    if allow_interactive:
+        return _run_coroutine(get_dish_cookie_interactive())
+
+    raise _non_interactive_auth_error(force_refresh)
 
 
-def get_dish_credentials() -> DishCredentials:
+def get_dish_credentials(
+    force_refresh: bool = False,
+    allow_interactive: bool = True,
+) -> DishCredentials:
     """Synchronous wrapper for full credentials retrieval.
 
     First checks for stored credentials, then attempts interactive login if needed.
 
+    Args:
+        force_refresh: When True, ignore the stored cookie and perform a fresh login.
+        allow_interactive: When True, fall back to interactive login if headless auth
+            is not configured.
+
     Returns:
         DishCredentials containing cookie, team_id, and member_id
     """
-    stored_cookie = os.getenv("DISH_COOKIE")
-    stored_team_id = os.getenv("TEAM_ID")
-    stored_member_id = os.getenv("MEMBER_ID")
+    stored = _stored_credentials()
 
-    if stored_cookie and stored_team_id and stored_member_id:
+    if stored.cookie and stored.team_id and stored.member_id and not force_refresh:
+        return stored
+
+    email, password = _headless_login_credentials()
+    if email and password:
         return DishCredentials(
-            cookie=stored_cookie,
-            team_id=stored_team_id,
-            member_id=stored_member_id,
+            cookie=_run_coroutine(get_dish_cookie_headless(email, password)),
+            team_id=stored.team_id,
+            member_id=stored.member_id,
         )
 
-    return asyncio.run(get_dish_credentials_interactive())
+    if allow_interactive:
+        return _run_coroutine(get_dish_credentials_interactive())
+
+    raise _non_interactive_auth_error(force_refresh)
 
 
 def save_credentials_to_env(credentials: DishCredentials, env_path: Path | None = None) -> Path:

@@ -4,6 +4,7 @@ import os
 from unittest.mock import patch
 
 import responses
+from get_credentials import DishCredentials
 from mcp_server import book_room as book_room_tool
 from mcp_server import cancel_booking as cancel_booking_tool
 from mcp_server import (
@@ -62,6 +63,46 @@ class TestCheckAvailabilityAndListBookings:
             assert len(rsps.calls) == 1
             assert rsps.calls[0].request.headers["Cookie"] == "connect.sid=env_cookie"
 
+    def test_auto_authenticates_when_cookie_missing_but_login_creds_exist(self) -> None:
+        """Populate a missing cookie automatically from stored login credentials."""
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T09:00:00Z",
+            end_datetime="2025-01-15T17:00:00Z",
+        )
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "DISH_EMAIL": "user@example.com",
+                    "DISH_PASSWORD": "password123",
+                },
+                clear=True,
+            ),
+            patch(
+                "mcp_server.get_dish_credentials",
+                return_value=DishCredentials(cookie="connect.sid=auto_cookie"),
+            ) as mock_get_credentials,
+            patch("mcp_server.save_credentials_to_env"),
+            responses.RequestsMock() as rsps,
+        ):
+            rsps.add(
+                responses.GET,
+                BOOKINGS_OCCURRENCES_ENDPOINT,
+                json=[],
+                status=200,
+            )
+
+            check_availability_and_list_bookings(datetime_range)
+
+            assert len(rsps.calls) == 1
+            assert rsps.calls[0].request.headers["Cookie"] == "connect.sid=auto_cookie"
+            assert os.environ["DISH_COOKIE"] == "connect.sid=auto_cookie"
+            mock_get_credentials.assert_called_once_with(
+                force_refresh=False,
+                allow_interactive=False,
+            )
+
     @responses.activate
     def test_returns_formatted_availability_on_success(self) -> None:
         """Return formatted availability summary on successful API call."""
@@ -107,6 +148,54 @@ class TestCheckAvailabilityAndListBookings:
         )
 
         assert "Error" in result
+
+    def test_reauthenticates_after_unauthorised_response(self) -> None:
+        """Retry once with a fresh cookie when the stored session has expired."""
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T09:00:00Z",
+            end_datetime="2025-01-15T17:00:00Z",
+        )
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "DISH_COOKIE": "connect.sid=expired_cookie",
+                    "DISH_EMAIL": "user@example.com",
+                    "DISH_PASSWORD": "password123",
+                },
+                clear=True,
+            ),
+            patch(
+                "mcp_server.get_dish_credentials",
+                return_value=DishCredentials(cookie="connect.sid=fresh_cookie"),
+            ) as mock_get_credentials,
+            patch("mcp_server.save_credentials_to_env"),
+            responses.RequestsMock() as rsps,
+        ):
+            rsps.add(
+                responses.GET,
+                BOOKINGS_OCCURRENCES_ENDPOINT,
+                json={"error": "Unauthorised"},
+                status=401,
+            )
+            rsps.add(
+                responses.GET,
+                BOOKINGS_OCCURRENCES_ENDPOINT,
+                json=[],
+                status=200,
+            )
+
+            result = check_availability_and_list_bookings(datetime_range)
+
+            assert "ROOM AVAILABILITY SUMMARY" in result
+            assert len(rsps.calls) == 2
+            assert rsps.calls[0].request.headers["Cookie"] == "connect.sid=expired_cookie"
+            assert rsps.calls[1].request.headers["Cookie"] == "connect.sid=fresh_cookie"
+            mock_get_credentials.assert_called_once_with(
+                force_refresh=True,
+                allow_interactive=False,
+            )
 
     @responses.activate
     def test_uses_custom_resource_ids(self) -> None:
@@ -292,6 +381,66 @@ class TestBookRoomTool:
 
         assert "Error" in result
         assert "409" in result
+
+    def test_reauthenticates_after_booking_cookie_expires(self) -> None:
+        """Retry booking once with a refreshed cookie after auth failure."""
+        datetime_range = DatetimeRange(
+            start_datetime="2025-01-15T10:00:00.000Z",
+            end_datetime="2025-01-15T11:00:00.000Z",
+        )
+        user_info = UserInfo(
+            team_id="team123",
+            member_id="member456",
+        )
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "DISH_COOKIE": "connect.sid=expired_cookie",
+                    "DISH_EMAIL": "user@example.com",
+                    "DISH_PASSWORD": "password123",
+                },
+                clear=True,
+            ),
+            patch(
+                "mcp_server.get_dish_credentials",
+                return_value=DishCredentials(cookie="connect.sid=fresh_cookie"),
+            ) as mock_get_credentials,
+            patch("mcp_server.save_credentials_to_env"),
+            responses.RequestsMock() as rsps,
+        ):
+            rsps.add(
+                responses.POST,
+                BOOKINGS_ENDPOINT,
+                json={"error": "Unauthorised"},
+                status=401,
+            )
+            rsps.add(
+                responses.POST,
+                BOOKINGS_ENDPOINT,
+                json={
+                    "start": {"dateTime": "2025-01-15T10:00:00.000Z"},
+                    "end": {"dateTime": "2025-01-15T11:00:00.000Z"},
+                    "resourceId": "6422bced61d5854ab3fedd62",
+                },
+                status=201,
+            )
+
+            result = book_room(
+                datetime_range=datetime_range,
+                meeting_room_name="Boyle",
+                user_info=user_info,
+            )
+
+            assert "Booked Boyle" in result
+            assert len(rsps.calls) == 2
+            assert rsps.calls[0].request.headers["Cookie"] == "connect.sid=expired_cookie"
+            assert rsps.calls[1].request.headers["Cookie"] == "connect.sid=fresh_cookie"
+            mock_get_credentials.assert_called_once_with(
+                force_refresh=True,
+                allow_interactive=False,
+            )
 
     def test_returns_error_on_unknown_room(self) -> None:
         """Return error for unknown room name."""
